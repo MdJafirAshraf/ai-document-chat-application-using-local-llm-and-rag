@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local RAG - PDF Chat</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Using Tailwind CSS for rapid UI development -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
+
+    <!-- Header -->
+    <!-- Navigation Header -->
+    <nav class="bg-white border-b border-gray-200 flex-none z-20">
+        <div class="max-w-full px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-600 text-white p-1.5 rounded">
+                        <i class="fa-solid fa-layer-group text-lg"></i>
+                    </div>
+                    <span class="font-bold text-lg text-gray-800">Local RAG</span>
+                    
+                    <div class="hidden md:flex ml-8 space-x-4">
+                        <a href="/" class="px-3 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-900">
+                            Upload & Train
+                        </a>
+                        <a href="/chat" class="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                            Chat
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden sm:block">
+                         <div class="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Index Freshness</div>
+                         <div id="index-freshness" class="text-xs font-mono text-gray-700">Checking...</div>
+                    </div>
+                    <button id="reset-chat-btn" class="text-gray-400 hover:text-red-500 transition" title="Reset Chat">
+                        <i class="fa-solid fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-6 py-8 space-y-8">
+
+        <!-- Upload Area -->
+        <section id="upload-section" class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 transition-all">
+            <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer group">
+                <input type="file" id="file-input" class="hidden" multiple accept="application/pdf">
+                <div class="mb-4">
+                    <i class="fa-solid fa-cloud-arrow-up text-4xl text-gray-300 group-hover:text-blue-500 transition-colors"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Drag & Drop PDFs here</h3>
+                <p class="text-gray-500 text-sm mb-4">or click to browse files</p>
+                <button onclick="document.getElementById('file-input').click()" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
+                    Browse Files
+                </button>
+            </div>
+        </section>
+
+        <!-- Uploaded Files List -->
+        <section id="files-section" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="font-semibold text-gray-700">Uploaded Documents</h3>
+                <span id="file-count-badge" class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">0 files</span>
+            </div>
+            <ul id="file-list" class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                <!-- File items injected here via JS -->
+            </ul>
+        </section>
+
+        <!-- Train / Index Section -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Controls -->
+            <div class="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800">Knowledge Base Index</h2>
+                    <span id="index-status" class="text-xs font-mono text-gray-400">IDLE</span>
+                </div>
+                
+                <p class="text-sm text-gray-500 mb-6">
+                    After uploading or removing files, you must re-train the index to update the chatbot's knowledge base.
+                </p>
+
+                <!-- Progress Bar (Hidden by default) -->
+                <div id="progress-container" class="hidden mb-6 space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span id="progress-label" class="font-medium text-blue-600">Initializing...</span>
+                        <span id="progress-percent" class="text-gray-600">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                        <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <button id="train-btn" class="w-full py-3 px-4 bg-gray-900 hover:bg-black text-white rounded-lg font-medium transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Train / Index Documents</span>
+                </button>
+            </div>
+
+            <!-- Index Info Block -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-sm">
+                <h3 class="font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-100">Current Index Stats</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Documents</div>
+                        <div class="font-mono text-gray-700" id="info-pdf-count">0</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Vectors Indexed</div>
+                        <div class="font-mono text-gray-700" id="info-vectors">0</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400 text-xs uppercase tracking-wider mb-1">Last Trained</div>
+                        <div class="font-mono text-gray-700" id="info-last-trained">-</div>
+                    </div>
+                    <div class="pt-2 border-t border-gray-100">
+                        <div class="text-gray-400 text-xs mb-1">Embedding Model</div>
+                        <div class="font-mono text-xs text-blue-600 truncate" id="info-model-emb">...</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-400 text-xs mb-1">LLM Model</div>
+                        <div class="font-mono text-xs text-purple-600 truncate" id="info-model-llm">...</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

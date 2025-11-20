@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local RAG - Chat</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        /* Markdown Styles */
+        .prose ul { list-style-type: disc; margin-left: 1.5rem; }
+        .prose ol { list-style-type: decimal; margin-left: 1.5rem; }
+        .prose p { margin-bottom: 0.5rem; }
+        .prose strong { font-weight: 600; color: #1f2937; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <nav class="bg-white border-b border-gray-200 flex-none z-20">
+        <div class="max-w-full px-4">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-600 text-white p-1.5 rounded">
+                        <i class="fa-solid fa-layer-group text-lg"></i>
+                    </div>
+                    <span class="font-bold text-lg text-gray-800">Local RAG</span>
+                    
+                    <div class="hidden md:flex ml-8 space-x-4">
+                        <a href="/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
+                            Upload & Train
+                        </a>
+                        <a href="/chat" class="px-3 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-900">
+                            Chat
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right hidden sm:block">
+                         <div class="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Index Freshness</div>
+                         <div id="index-freshness" class="text-xs font-mono text-gray-700">Checking...</div>
+                    </div>
+                    <button id="reset-chat-btn" class="text-gray-400 hover:text-red-500 transition" title="Reset Chat">
+                        <i class="fa-solid fa-eraser"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Settings Sidebar (Left) -->
+        <aside class="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col overflow-y-auto z-10">
+            <div class="p-4 border-b border-gray-100">
+                <h2 class="font-semibold text-gray-700"><i class="fa-solid fa-sliders mr-2"></i>Options</h2>
+            </div>
+            <div class="p-4 space-y-6">
+                
+                <!-- Top K -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Top K (Contexts)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="range" id="opt-topk" min="2" max="10" value="3" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                        <span id="val-topk" class="text-xs font-mono w-4">3</span>
+                    </div>
+                </div>
+
+                <!-- Max Tokens -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Max Tokens</label>
+                    <select id="opt-tokens" class="w-full text-sm border-gray-300 border rounded p-1.5 bg-gray-50 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="256">256</option>
+                        <option value="512" selected>512</option>
+                        <option value="1024">1024</option>
+                        <option value="2048">2048</option>
+                    </select>
+                </div>
+
+                <!-- Temperature -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Temperature</label>
+                    <div class="flex items-center gap-2">
+                        <input type="range" id="opt-temp" min="0" max="1" step="0.1" value="0.7" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                        <span id="val-temp" class="text-xs font-mono w-6">0.7</span>
+                    </div>
+                </div>
+
+                <!-- Show Raw -->
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-medium text-gray-500">Show Raw Chunks</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="opt-raw" class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div class="pt-6 border-t border-gray-100">
+                    <p class="text-[10px] text-gray-400 leading-relaxed">
+                        Adjust retrieval parameters to fine-tune specific vs creative answers.
+                    </p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="flex-1 flex flex-col bg-gray-50 relative">
+            
+            <!-- Messages Container -->
+            <div id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth">
+                
+                <!-- Welcome Message -->
+                <div class="flex gap-4 max-w-3xl mx-auto">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white flex-shrink-0">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-2xl rounded-tl-none p-4 shadow-sm text-sm text-gray-800">
+                        <p>Hello! I've indexed your PDF documents. Ask me anything about them.</p>
+                    </div>
+                </div>
+
+                <!-- Dynamic Messages will be injected here -->
+            
+            </div>
+
+            <!-- Input Area -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <div class="max-w-3xl mx-auto relative">
+                    
+                    <!-- Loading / Cancel State overlay in input -->
+                    <div id="loading-state" class="hidden absolute -top-12 left-0 right-0 flex justify-center">
+                        <button id="cancel-btn" class="bg-white border border-gray-300 text-red-500 text-xs px-3 py-1.5 rounded-full shadow-sm hover:bg-red-50 flex items-center gap-2">
+                            <i class="fa-solid fa-stop"></i> Stop Generating
+                        </button>
+                    </div>
+
+                    <div class="relative">
+                        <textarea 
+                            id="user-input" 
+                            rows="1" 
+                            class="w-full bg-gray-100 text-gray-800 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden"
+                            placeholder="Ask a question about your documents..."
+                            style="min-height: 50px; max-height: 150px;"
+                        ></textarea>
+                        <button 
+                            id="send-btn" 
+                            class="absolute right-2 bottom-2.5 bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="text-center mt-2">
+                        <p class="text-[10px] text-gray-400">AI can make mistakes. Check important info.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Source Modal (Hidden) -->
+    <div id="source-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="p-4 border-b border-gray-100 flex justify-between items-center">
+                <div>
+                    <h3 class="font-bold text-gray-800" id="modal-filename">Filename.pdf</h3>
+                    <p class="text-xs text-gray-500">Page <span id="modal-page">1</span> • Score: <span id="modal-score">0.0</span></p>
+                </div>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto bg-gray-50 font-serif text-gray-700 leading-relaxed whitespace-pre-wrap" id="modal-content">
+                <!-- Full chunk text goes here -->
+            </div>
+            <div class="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+                <a id="modal-download" href="#" target="_blank" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-100 transition">
+                    <i class="fa-regular fa-file-pdf mr-2"></i> Open PDF
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/chat.js"></script>
+</body>
+</html>
