@@ -1,56 +1,51 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('file-input');
-    const fileListEl = document.getElementById('file-list');
-    const filesSection = document.getElementById('files-section');
-    const trainBtn = document.getElementById('train-btn');
-    const progressContainer = document.getElementById('progress-container');
-    const progressBar = document.getElementById('progress-bar');
-    const progressLabel = document.getElementById('progress-label');
-    const progressPercent = document.getElementById('progress-percent');
+$(document).ready(function() {
+    const dropZone = $('#drop-zone');
+    const fileInput = $('#file-input');
+    const fileListEl = $('#file-list');
+    const filesSection = $('#files-section');
+    const trainBtn = $('#train-btn');
+    const progressContainer = $('#progress-container');
+    const progressBar = $('#progress-bar');
+    const progressLabel = $('#progress-label');
+    const progressPercent = $('#progress-percent');
     
     // Initialization
     fetchFiles();
     fetchInfo();
-    checkTrainingStatus(); // Poll immediately in case page was refreshed during training
+    checkTrainingStatus(); 
 
     // --- Drag & Drop Logic ---
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
+    // jQuery handles events slightly differently, passing a jQuery event object. 
+    // We need originalEvent for dataTransfer.
+    
+    dropZone.on('dragenter dragover dragleave drop', function(e) {
         e.preventDefault();
         e.stopPropagation();
-    }
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
+    dropZone.on('dragenter dragover', function() {
+        dropZone.addClass('drag-over');
     });
 
-    dropZone.addEventListener('drop', handleDrop, false);
-    fileInput.addEventListener('change', handleFilesSelect, false);
+    dropZone.on('dragleave drop', function() {
+        dropZone.removeClass('drag-over');
+    });
 
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
+    dropZone.on('drop', function(e) {
+        const files = e.originalEvent.dataTransfer.files;
         handleFiles(files);
-    }
+    });
 
-    function handleFilesSelect(e) {
+    fileInput.on('change', function(e) {
         const files = e.target.files;
         handleFiles(files);
-    }
+    });
 
     function handleFiles(files) {
         const formData = new FormData();
         let validFiles = false;
         
-        ([...files]).forEach(file => {
+        $.each(files, function(i, file) {
             if (file.type === 'application/pdf') {
                 formData.append('files', file);
                 validFiles = true;
@@ -64,141 +59,175 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- API Calls ---
+    // --- API Calls (jQuery AJAX) ---
 
     async function uploadFiles(formData) {
         // UI indicating upload start
-        dropZone.innerHTML = `<div class="text-blue-600"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i><p class="mt-2">Uploading...</p></div>`;
+        dropZone.html(`<div class="text-blue-600"><i class="fa-solid fa-circle-notch fa-spin text-2xl"></i><p class="mt-2">Uploading...</p></div>`);
         
         try {
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData
+            await $.ajax({
+                url: '/upload',
+                type: 'POST',
+                data: formData,
+                processData: false, // Important for FormData
+                contentType: false, // Important for FormData
             });
-            const result = await response.json();
-            fetchFiles(); // Refresh list
-            fetchInfo();  // Update stats
+            
+            fetchFiles(); 
+            fetchInfo();  
         } catch (error) {
             console.error('Error uploading:', error);
+            alert("Upload failed.");
         } finally {
             // Reset Dropzone
             setTimeout(() => {
-                dropZone.innerHTML = `
+                dropZone.html(`
                     <input type="file" id="file-input" class="hidden" multiple accept="application/pdf">
                     <div class="mb-4"><i class="fa-solid fa-cloud-arrow-up text-4xl text-gray-300"></i></div>
                     <h3 class="text-lg font-semibold text-gray-700 mb-2">Drag & Drop PDFs here</h3>
                     <p class="text-gray-500 text-sm mb-4">or click to browse files</p>
-                    <button onclick="document.getElementById('file-input').click()" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition">Browse Files</button>
-                `;
-                // Re-attach listener to new button
-                document.getElementById('file-input').addEventListener('change', handleFilesSelect);
+                    <button id="browse-btn" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition">Browse Files</button>
+                `);
+                
+                // Re-bind click event to the new button since HTML was replaced
+                $('#browse-btn').on('click', function() {
+                    $('#file-input').click();
+                });
+                // Re-bind change event to input
+                $('#file-input').on('change', function(e) {
+                    handleFiles(e.target.files);
+                });
             }, 500);
         }
     }
 
     async function fetchFiles() {
-        const response = await fetch('/files');
-        const files = await response.json();
-        
-        // Update Badge
-        document.getElementById('file-count-badge').textContent = `${files.length} files`;
-        
-        // Update List
-        fileListEl.innerHTML = '';
-        if (files.length > 0) {
-            filesSection.classList.remove('hidden');
-            trainBtn.disabled = false;
-            files.forEach(file => {
-                const li = document.createElement('li');
-                li.className = 'p-4 flex items-center justify-between hover:bg-gray-50 transition fade-in';
-                li.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <div class="text-red-500 bg-red-50 p-2 rounded">
-                            <i class="fa-regular fa-file-pdf text-xl"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium text-gray-800 text-sm truncate w-64" title="${file.filename}">${file.filename}</p>
-                            <p class="text-xs text-gray-500">${file.pages} pages • ${file.size}</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <a href="/files/view/${file.filename}" target="_blank" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition" title="Preview">
-                            <i class="fa-regular fa-eye"></i>
-                        </a>
-                        <button onclick="deleteFile('${file.filename}')" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition" title="Remove">
-                            <i class="fa-regular fa-trash-can"></i>
-                        </button>
-                    </div>
-                `;
-                fileListEl.appendChild(li);
-            });
-        } else {
-            filesSection.classList.add('hidden');
-            trainBtn.disabled = true;
+        try {
+            const files = await $.ajax({ url: '/files', type: 'GET' });
+
+            // Update Badge
+            $('#file-count-badge').text(`${files.length} files`);
+            
+            // Update List
+            fileListEl.empty();
+            if (files.length > 0) {
+                filesSection.removeClass('hidden');
+                trainBtn.prop('disabled', false);
+                
+                $.each(files, function(index, file) {
+                    const li = $(`
+                        <li class="p-4 flex items-center justify-between hover:bg-gray-50 transition fade-in">
+                            <div class="flex items-center gap-4">
+                                <div class="text-red-500 bg-red-50 p-2 rounded">
+                                    <i class="fa-regular fa-file-pdf text-xl"></i>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-800 text-sm truncate w-64" title="${file.filename}">${file.filename}</p>
+                                    <p class="text-xs text-gray-500">${file.pages} pages • ${file.size}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <a href="/files/view/${file.filename}" target="_blank" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition" title="Preview">
+                                    <i class="fa-regular fa-eye"></i>
+                                </a>
+                                <button class="delete-btn p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition" data-filename="${file.filename}" title="Remove">
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </li>
+                    `);
+                    fileListEl.append(li);
+                });
+
+                // Attach click handlers for delete buttons
+                $('.delete-btn').on('click', function() {
+                    deleteFile($(this).data('filename'));
+                });
+
+            } else {
+                filesSection.addClass('hidden');
+                trainBtn.prop('disabled', true);
+            }
+        } catch (e) {
+            console.error("Error fetching files", e);
         }
     }
 
     window.deleteFile = async (filename) => {
         if(!confirm(`Remove ${filename}?`)) return;
-        await fetch(`/files/${filename}`, { method: 'DELETE' });
-        fetchFiles();
-        fetchInfo();
+        try {
+            await $.ajax({ url: `/files/${filename}`, type: 'DELETE' });
+            fetchFiles();
+            fetchInfo();
+        } catch (e) {
+            alert("Error deleting file");
+        }
     };
 
     async function fetchInfo() {
-        const res = await fetch('/info');
-        const data = await res.json();
-        
-        document.getElementById('info-pdf-count').textContent = data.pdf_count;
-        document.getElementById('info-vectors').textContent = data.vectors_indexed;
-        document.getElementById('info-last-trained').textContent = data.last_trained_at || "Never";
-        document.getElementById('info-model-emb').textContent = data.embedding_model;
-        document.getElementById('info-model-llm').textContent = data.llm_model;
+        try {
+            const data = await $.ajax({ url: '/info', type: 'GET' });
+            
+            $('#info-pdf-count').text(data.pdf_count);
+            $('#info-vectors').text(data.vectors_indexed);
+            $('#info-last-trained').text(data.last_trained_at || "Never");
+            $('#info-model-emb').text(data.embedding_model);
+            $('#info-model-llm').text(data.llm_model);
+        } catch (e) {
+            console.log("Could not fetch info");
+        }
     }
 
     // --- Training Logic ---
     
-    trainBtn.addEventListener('click', async () => {
-        trainBtn.disabled = true;
-        const res = await fetch('/train', { method: 'POST' });
-        if(res.ok) {
+    trainBtn.on('click', async function() {
+        trainBtn.prop('disabled', true);
+        try {
+            await $.ajax({ url: '/train', type: 'POST' });
             pollTrainingStatus();
+        } catch (e) {
+            alert("Failed to start training");
+            trainBtn.prop('disabled', false);
         }
     });
 
     async function checkTrainingStatus() {
-        // Initial check on load
-        const res = await fetch('/train/status');
-        const state = await res.json();
-        if (state.is_training) {
-            pollTrainingStatus();
-        }
+        try {
+            const state = await $.ajax({ url: '/train/status', type: 'GET' });
+            if (state.is_training) {
+                pollTrainingStatus();
+            }
+        } catch(e) {}
     }
 
     function pollTrainingStatus() {
-        progressContainer.classList.remove('hidden');
-        trainBtn.disabled = true;
-        trainBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...`;
+        progressContainer.removeClass('hidden');
+        trainBtn.prop('disabled', true);
+        trainBtn.html(`<i class="fa-solid fa-circle-notch fa-spin"></i> Processing...`);
 
         const interval = setInterval(async () => {
-            const res = await fetch('/train/status');
-            const state = await res.json();
+            try {
+                const state = await $.ajax({ url: '/train/status', type: 'GET' });
 
-            // Update UI
-            progressBar.style.width = `${state.progress}%`;
-            progressLabel.textContent = state.stage;
-            progressPercent.textContent = `${state.progress}%`;
+                // Update UI
+                progressBar.css('width', `${state.progress}%`);
+                progressLabel.text(state.stage);
+                progressPercent.text(`${state.progress}%`);
 
-            if (!state.is_training) {
+                if (!state.is_training) {
+                    clearInterval(interval);
+                    // Finished
+                    setTimeout(() => {
+                        progressContainer.addClass('hidden');
+                        trainBtn.prop('disabled', false);
+                        trainBtn.html(`<i class="fa-solid fa-bolt"></i> Train / Index Documents`);
+                        fetchInfo(); 
+                        alert(state.message);
+                    }, 1000);
+                }
+            } catch (e) {
                 clearInterval(interval);
-                // Finished
-                setTimeout(() => {
-                    progressContainer.classList.add('hidden');
-                    trainBtn.disabled = false;
-                    trainBtn.innerHTML = `<i class="fa-solid fa-bolt"></i> Train / Index Documents`;
-                    fetchInfo(); // Refresh last trained timestamp
-                    alert(state.message);
-                }, 1000);
             }
         }, 1000);
     }
