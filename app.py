@@ -1,4 +1,7 @@
 import os
+import time
+import datetime
+import threading
 import configparser
 from PyPDF2 import PdfReader
 from flask import Flask, render_template, request, jsonify, send_from_directory
@@ -6,7 +9,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 app = Flask(__name__)
 
 
-# Render pages
+# --- Page Routes ---
 
 @app.route('/')
 def upload():
@@ -18,13 +21,19 @@ def chat():
     return render_template('chat.html')
     
 
-# --- API Endpoints ---
-
 config = configparser.ConfigParser()
 config.read("config.cfg")
 
 UPLOAD_DIR = config["app"]["upload_directory"]
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Global state for training progress
+training_state = {
+    "is_training": False,
+    "progress": 0,
+    "stage": "Idle",
+    "message": "Ready."
+}
 
 def get_pdf_page_count(filepath):
     try:
@@ -39,6 +48,43 @@ def format_size(size):
             return f"{size:.2f} {unit}"
         size /= 1024
     return f"{size:.2f} TB"
+
+def background_training_task():
+    """
+    Simulates a long-running RAG indexing process in a separate thread.
+    """
+    global training_state, CONFIG_INFO
+    
+    with app.app_context():
+        try:
+            training_state.update({"stage": "Extracting pages...", "progress": 10})
+            
+            training_state.update({"stage": "Chunking text...", "progress": 40})
+            
+            training_state.update({"stage": "Embedding vectors...", "progress": 70})
+            
+            training_state.update({"stage": "Saving index...", "progress": 90})
+            
+            total_vectors = 10 * 150
+            
+            config["training"]["last_trained_at"] = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            config["training"]["vectors_indexed"] = str(total_vectors)
+
+            with open("config.cfg", "w") as f:
+                config.write(f)
+            
+            training_state.update({
+                "is_training": False, 
+                "progress": 100, 
+                "stage": "Complete", 
+                "message": "Index updated successfully."
+            })
+
+        except Exception as e:
+            training_state.update({"is_training": False, "stage": "Error", "message": str(e)})
+
+
+# --- API Endpoints ---
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -104,6 +150,38 @@ def delete_file(filename):
 @app.route('/files/view/<filename>', methods=['GET'])
 def view_file(filename):
     return send_from_directory(UPLOAD_DIR, filename)
+
+# --- Training Endpoints ---
+
+@app.route('/train', methods=['POST'])
+def start_training():
+    if training_state["is_training"]:
+        return jsonify({"message": "Training already in progress"})
+    
+    # Check if files exist
+    files = [f for f in os.listdir(UPLOAD_DIR) if f.lower().endswith('.pdf')]
+    if not files:
+         return jsonify({"error": "No files to train"}), 400
+
+    training_state["is_training"] = True
+    training_state["progress"] = 0
+    
+    # Run in background thread so we don't block the UI
+    thread = threading.Thread(target=background_training_task)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"message": "Training started"})
+
+@app.route('/train/status', methods=['GET'])
+def get_training_status():
+    return jsonify(training_state)
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
