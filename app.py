@@ -1,6 +1,7 @@
 import os
+import configparser
 from PyPDF2 import PdfReader
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 
 app = Flask(__name__)
 
@@ -19,15 +20,11 @@ def chat():
 
 # --- API Endpoints ---
 
-UPLOAD_DIR = "static/uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+config = configparser.ConfigParser()
+config.read("config.cfg")
 
-CONFIG_INFO = {
-    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-    "llm_model": "llama2-7b-chat.gguf",
-    "last_trained_at": None,
-    "vectors_indexed": 0
-}
+UPLOAD_DIR = config["app"]["upload_directory"]
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def get_pdf_page_count(filepath):
     try:
@@ -42,7 +39,6 @@ def format_size(size):
             return f"{size:.2f} {unit}"
         size /= 1024
     return f"{size:.2f} TB"
-
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -76,10 +72,10 @@ def get_index_info():
     
     return jsonify({
         "pdf_count": pdf_count,
-        "embedding_model": CONFIG_INFO["embedding_model"],
-        "llm_model": CONFIG_INFO["llm_model"],
-        "last_trained_at": CONFIG_INFO["last_trained_at"],
-        "vectors_indexed": CONFIG_INFO["vectors_indexed"]
+        "embedding_model": config["models"]["embedding_model"],
+        "llm_model": config["models"]["llm_model"],
+        "last_trained_at": config["training"]["last_trained_at"],
+        "vectors_indexed": config["training"]["vectors_indexed"]
     })
 
 @app.route('/files', methods=['GET'])
