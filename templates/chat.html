@@ -21,31 +21,57 @@
 <body class="bg-gray-100 h-screen flex flex-col overflow-hidden">
 
     <!-- Header -->
-    <nav class="bg-white border-b border-gray-200 flex-none z-20">
-        <div class="max-w-full px-4">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center gap-4">
-                    <div class="bg-blue-600 text-white p-1.5 rounded">
+    <nav class="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md border-b border-slate-200 transition-all duration-300" id="main-nav">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                
+                <!-- Left: Brand / Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3 cursor-default">
+                    <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-2 rounded-lg shadow-lg shadow-blue-500/30 transform hover:scale-105 transition-transform duration-200">
                         <i class="fa-solid fa-layer-group text-lg"></i>
                     </div>
-                    <span class="font-bold text-lg text-gray-800">Local RAG</span>
-                    
-                    <div class="hidden md:flex ml-8 space-x-4">
-                        <a href="/" class="px-3 py-2 rounded-md text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50">
-                            Upload & Train
-                        </a>
-                        <a href="/chat" class="px-3 py-2 rounded-md text-sm font-medium bg-gray-100 text-gray-900">
-                            Chat
-                        </a>
+                    <div>
+                        <h1 class="font-bold text-xl tracking-tight text-slate-800">Local<span class="text-blue-600">RAG</span></h1>
+                        <p class="text-[10px] text-slate-400 font-medium tracking-wider uppercase leading-none">Knowledge Engine</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div class="text-right hidden sm:block">
-                         <div class="text-[10px] uppercase text-gray-400 font-bold tracking-wider">Index Freshness</div>
-                         <div id="index-freshness" class="text-xs font-mono text-gray-700">Checking...</div>
+
+                <!-- Center: Interactive Pill Navigation -->
+                <div class="hidden md:flex absolute left-1/2 transform -translate-x-1/2">
+                    <div class="flex items-center bg-slate-100/50 p-1.5 rounded-full border border-slate-200/50 shadow-inner">
+                        
+                        <!-- Upload Link -->
+                        <a href="/" id="nav-upload" class="nav-item flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm">
+                            <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                            <span>Upload & Train</span>
+                        </a>
+
+                        <!-- Chat Link -->
+                        <a href="/chat" id="nav-chat" class="active nav-item flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 text-slate-500 hover:text-slate-900 hover:bg-white hover:shadow-sm">
+                            <i class="fa-regular fa-comments text-xs"></i>
+                            <span>Chat Interface</span>
+                        </a>
+                        
                     </div>
-                    <button id="reset-chat-btn" class="text-gray-400 hover:text-red-500 transition" title="Reset Chat">
-                        <i class="fa-solid fa-eraser"></i>
+                </div>
+
+                <!-- Right: Status & Actions -->
+                <div class="flex items-center gap-4">
+                    <!-- Status Badge -->
+                    <div class="hidden sm:flex flex-col items-end mr-2">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">System Status</span>
+                        <div class="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded border border-slate-200" id="nav-status-badge">
+                            <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-300" id="nav-status-dot"></span>
+                            </span>
+                            <span class="text-xs font-mono font-medium text-slate-500" id="nav-status-text">Checking...</span>
+                        </div>
+                    </div>
+
+                    <!-- Chat Reset Button (Only shows on chat page via JS) -->
+                    <button id="reset-chat-btn" class="hidden group p-2 rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors duration-200" title="Clear History">
+                        <i class="fa-solid fa-eraser group-hover:rotate-12 transition-transform"></i>
                     </button>
                 </div>
             </div>

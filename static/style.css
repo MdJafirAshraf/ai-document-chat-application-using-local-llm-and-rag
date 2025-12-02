@@ -1,3 +1,20 @@
+/* Navigation Active State */
+.nav-item.active {
+    background-color: #0f172a; /* Slate-900 */
+    color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.nav-item.active i {
+    color: #38bdf8; /* Sky-400 icon color */
+}
+
+/* Smooth fade for glassmorphism */
+nav {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
 /* Custom scrollbar for file list */
 #file-list::-webkit-scrollbar {
     width: 6px;

@@ -182,6 +182,17 @@ $(document).ready(function() {
 
     // --- Training Logic ---
     
+    window.scrollToTrain = function() {
+        $('html, body').animate({
+            scrollTop: $("#train-btn").offset().top - 100
+        }, 500);
+        // Optional: Highlight the button briefly
+        $('#train-btn').addClass('ring-4 ring-blue-300').delay(1000).queue(function(next){
+            $(this).removeClass('ring-4 ring-blue-300');
+            next();
+        });
+    };
+    
     trainBtn.on('click', async function() {
         trainBtn.prop('disabled', true);
         try {
