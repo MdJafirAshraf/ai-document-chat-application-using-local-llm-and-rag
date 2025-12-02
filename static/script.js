@@ -110,9 +110,9 @@ $(document).ready(function() {
             $('#file-count-badge').text(`${files.length} files`);
             
             // Update List
-            fileListEl.empty();
             if (files.length > 0) {
-                filesSection.removeClass('hidden');
+                fileListEl.empty();
+                // filesSection.removeClass('hidden');
                 trainBtn.prop('disabled', false);
                 
                 $.each(files, function(index, file) {
@@ -144,9 +144,10 @@ $(document).ready(function() {
                 $('.delete-btn').on('click', function() {
                     deleteFile($(this).data('filename'));
                 });
+            } 
 
-            } else {
-                filesSection.addClass('hidden');
+            else {
+                // filesSection.addClass('hidden');
                 trainBtn.prop('disabled', true);
             }
         } catch (e) {

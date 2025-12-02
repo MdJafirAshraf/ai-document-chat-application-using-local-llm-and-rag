@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Local RAG - PDF Chat</title>
     <link rel="stylesheet" href="/static/style.css">
-    <!-- Using Tailwind CSS for rapid UI development -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -63,13 +62,14 @@
         </section>
 
         <!-- Uploaded Files List -->
-        <section id="files-section" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden">
+        <section id="files-section" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 class="font-semibold text-gray-700">Uploaded Documents</h3>
                 <span id="file-count-badge" class="bg-gray-200 text-gray-600 text-xs px-2 py-1 rounded-full">0 files</span>
             </div>
             <ul id="file-list" class="divide-y divide-gray-100 max-h-96 overflow-y-auto">
                 <!-- File items injected here via JS -->
+                <p class="p-4 font-medium text-gray-800 text-sm truncate text-center">No Files Found</p>
             </ul>
         </section>
 
