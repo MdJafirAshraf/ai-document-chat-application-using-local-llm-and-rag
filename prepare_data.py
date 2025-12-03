@@ -1,10 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForQuestionAnswering
-from transformers import pipeline
-from langchain import HuggingFacePipeline
-from langchain.chains import RetrievalQA
-
 import os
-
 from langchain.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -73,22 +67,19 @@ class PrepareData:
         return db
 
 
+if __name__ == "__main__":
+    page_content_column = "context"
+    dataset_name = "databricks/databricks-dolly-15k"
 
-# check vector folder
-# page_content_column = "context"
-# dataset_name = "databricks/databricks-dolly-15k"
+    prepare_data = PrepareData()
+    embeddings = prepare_data.embeddings
 
-# prepare_data = PrepareData()
-# embeddings = prepare_data.embeddings
-
-# if not os.path.exists("vectorstore/faiss_vectorstore"):
-#     print("Vector store not found, preparing data...")
-#     # data = prepare_data.load_dataset(dataset_name, page_content_column)
-#     data = prepare_data.load_data_from_directory("static/uploads", file_extension=".pdf")
-#     chunks = prepare_data.chunk_text(data)
-#     prepare_data.embedding_documents(chunks, embeddings)
-    
-#     print("Data preparation completed.")
-# else:
-#     print("Vector store found, skipping data preparation.")
-#     db = prepare_data.load_embeddings(embeddings)
+    if not os.path.exists("vectorstore/faiss_vectorstore"):
+        print("Vector store not found, preparing data...")
+        data = prepare_data.load_data_from_directory("static/uploads", file_extension=".pdf")
+        chunks = prepare_data.chunk_text(data)
+        prepare_data.embedding_documents(chunks, embeddings)
+        print("Data preparation completed.")
+    else:
+        print("Vector store found, skipping data preparation.")
+        db = prepare_data.load_embeddings(embeddings)
