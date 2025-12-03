@@ -69,7 +69,7 @@ def background_training_task():
             training_state.update({"stage": "Embedding vectors...", "progress": 80})
             training_state.update({"stage": "Saving index...", "progress": 90})
                         
-            config["training"]["last_trained_at"] = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            config["training"]["last_trained_at"] = str(datetime.datetime.now().strftime("%d-%m-%Y %H:%M"))
             config["training"]["vectors_indexed"] = str(total_vectors)
             config["training"]["no_of_files_to_train"] = str(len(os.listdir(UPLOAD_DIR)))
 

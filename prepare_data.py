@@ -2,7 +2,6 @@ import os
 from langchain.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.document_loaders import HuggingFaceDatasetLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 class PrepareData:
@@ -16,12 +15,6 @@ class PrepareData:
         model_kwargs=model_kwargs,
         encode_kwargs=encode_kwargs
     )
-
-    # Load dataset
-    def load_dataset(self, dataset_name, page_content_column):
-        loader = HuggingFaceDatasetLoader(dataset_name, page_content_column)
-        data = loader.load()
-        return data
     
     # Load data from directory
     def load_data_from_directory(self, directory_path, file_extension=".txt"):        
