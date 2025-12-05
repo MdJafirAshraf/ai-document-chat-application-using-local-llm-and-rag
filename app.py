@@ -1,4 +1,5 @@
 import os
+import time
 import datetime
 import threading
 import configparser
@@ -59,14 +60,15 @@ def background_training_task():
     
     with app.app_context():
         try:
+            training_state.update({"stage": "Extracting pages...", "progress": 20})
+            time.sleep(1)
+
+            training_state.update({"stage": "Preparing data...", "progress": 40})
             data = data_preparation.load_data_from_directory("static/uploads", file_extension=".pdf")
-            training_state.update({"stage": "Extracting pages...", "progress": 40})
-            
             chunks = data_preparation.chunk_text(data)
-            training_state.update({"stage": "Chunking text...", "progress": 60})
             
-            total_vectors = data_preparation.embedding_documents(chunks, data_preparation.embeddings)
             training_state.update({"stage": "Embedding vectors...", "progress": 80})
+            total_vectors = data_preparation.embedding_documents(chunks, data_preparation.embeddings)
             training_state.update({"stage": "Saving index...", "progress": 90})
                         
             config["training"]["last_trained_at"] = str(datetime.datetime.now().strftime("%d-%m-%Y %H:%M"))
